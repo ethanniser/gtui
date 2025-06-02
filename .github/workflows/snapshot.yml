@@ -2,7 +2,7 @@ name: Snapshot
 
 on:
   pull_request:
-    branches: [main, next-minor, next-major]
+    branches: [main]
   workflow_dispatch:
 
 permissions: {}
@@ -10,7 +10,6 @@ permissions: {}
 jobs:
   snapshot:
     name: Snapshot
-    if: github.repository_owner == 'Effect-Ts'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -18,7 +17,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/setup
       - name: Build package
-        run: pnpm build
+        run: bun run build
       - name: Create snapshot
         id: snapshot
-        run: pnpx pkg-pr-new@0.0.24 publish --pnpm --comment=off
+        run: bunx pkg-pr-new publish
