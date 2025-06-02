@@ -20,4 +20,4 @@ jobs:
         run: bun run build
       - name: Create snapshot
         id: snapshot
-        run: bunx pkg-pr-new publish
+        run: cd dist && bunx pkg-pr-new publish
