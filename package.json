@@ -9,22 +9,18 @@
     "url": "https://github.com/ethanniser/gtui"
   },
   "publishConfig": {
-    "access": "public",
-    "directory": "dist"
+    "access": "public"
   },
+  "main": "dist/bin.js",
+  "bin": "dist/bin.js",
   "scripts": {
-    "build": "bun run build:ts && bun run copy-package-json",
-    "build:ts": "bun build --entrypoints src/bin.ts --outdir ./dist --target node --minify",
+    "build": "bun build --entrypoints src/bin.ts --outdir ./dist --target node --minify",
     "run": "bun run src/bin.ts",
     "clean": "rimraf dist/*",
     "check": "tsc -b tsconfig.json",
     "lint": "eslint \"**/{src,test,examples,scripts,dtslint}/**/*.{ts,mjs}\"",
     "lint-fix": "bun run lint --fix",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage",
-    "copy-package-json": "tsx scripts/copy-package-json.ts",
-    "changeset-version": "changeset version && node scripts/version.mjs",
-    "changeset-publish": "bun run build && TEST_DIST= bunx vitest && changeset publish"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
