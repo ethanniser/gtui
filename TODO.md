@@ -1,1 +1,3 @@
 - tests are broken (do we even need tests?)
+- probably move all app state into a external store
+- command log
