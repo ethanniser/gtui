@@ -5,22 +5,18 @@ type CommandRun = {
 	output: string;
 };
 type State = {
-	pane: "stack" | "commits" | "viewer";
+	pane: "stack" | "commits" | "viewer" | "log";
 	commandLog: Array<CommandRun>;
 	cursorBranch?: string;
 	cursorCommit?: string;
 };
 
 type Action = {
-	// /** Transition to loaded state when have new data */
-	// dataLoaded: (data: AppData) => void;
-	// /** Transition to error state with message */
-	// setError: (error: string) => void;
-	// /** Transition to refetching state (when starting refetch) */
-	// startRefresh: () => void;
+	setPane: (pane: State["pane"]) => void;
 };
 
 export const useAppStore = create<State & Action>((set) => ({
 	pane: "stack",
 	commandLog: [],
+	setPane: (pane) => set({ pane }),
 }));
