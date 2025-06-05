@@ -1,27 +1,11 @@
 {
   "name": "gtui",
   "version": "0.0.1",
-  "type": "module",
-  "license": "MIT",
-  "description": "A tui for graphite",
   "repository": {
     "type": "git",
     "url": "https://github.com/ethanniser/gtui"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "main": "dist/bin.js",
-  "bin": "dist/bin.js",
-  "scripts": {
-    "build": "bun build --entrypoints src/bin.ts --outdir ./dist --target node --minify",
-    "run": "bun run src/bin.ts",
-    "clean": "rimraf dist/*",
-    "check": "tsc -b tsconfig.json",
-    "lint": "eslint \"**/{src,test,examples,scripts,dtslint}/**/*.{ts,mjs}\"",
-    "lint-fix": "bun run lint --fix",
-    "test": "vitest run"
-  },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
     "@changesets/cli": "^2.27.8",
@@ -56,5 +40,25 @@
     "typescript": "^5.6.2",
     "vitest": "^2.0.5"
   },
-  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
+  "bin": "dist/bin.js",
+  "description": "A tui for graphite",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build --entrypoints src/bin.ts --outdir ./dist --target node --minify",
+    "run": "bun run src/bin.ts",
+    "clean": "rimraf dist/*",
+    "check": "tsc -b tsconfig.json",
+    "lint": "eslint \"**/{src,test,examples,scripts,dtslint}/**/*.{ts,mjs}\"",
+    "lint-fix": "bun run lint --fix",
+    "test": "vitest run"
+  },
+  "type": "module",
+  "dependencies": {
+    "@tanstack/react-query": "^5.80.5",
+    "zustand": "^5.0.5"
+  }
 }

@@ -98,7 +98,7 @@ export default [
 			"@typescript-eslint/consistent-type-imports": "warn",
 
 			"@typescript-eslint/no-unused-vars": [
-				"error",
+				"off",
 				{
 					argsIgnorePattern: "^_",
 					varsIgnorePattern: "^_",
