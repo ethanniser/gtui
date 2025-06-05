@@ -9,18 +9,18 @@ type State = {
 	commandLog: Array<CommandRun>;
 	cursorBranch?: string;
 	cursorCommit?: string;
-	selectedCommitIndex: number;
 };
 
 type Action = {
 	setPane: (pane: State["pane"]) => void;
-	setSelectedCommitIndex: (index: number) => void;
+	setCursorBranch: (branchName: string) => void;
+	setCursorCommit: (commitHash: string) => void;
 };
 
 export const useAppStore = create<State & Action>((set) => ({
-	pane: "header",
+	pane: "stack",
 	commandLog: [],
-	selectedCommitIndex: 0,
 	setPane: (pane) => set({ pane }),
-	setSelectedCommitIndex: (index) => set({ selectedCommitIndex: index }),
+	setCursorBranch: (branchName) => set({ cursorBranch: branchName }),
+	setCursorCommit: (commitHash) => set({ cursorCommit: commitHash }),
 }));

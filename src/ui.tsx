@@ -9,15 +9,94 @@ interface PaneProps {
 }
 
 interface CommitsProps extends PaneProps {
-	selectedCommitIndex: number;
+	cursorCommit: string | undefined;
+}
+
+interface StackProps extends PaneProps {
+	cursorBranch: string | undefined;
 }
 
 interface ViewerProps extends PaneProps {
-	selectedCommitIndex: number;
+	cursorCommit: string | undefined;
+	cursorBranch: string | undefined;
 	showAsciiArt: boolean;
 }
 
-export function Stack({ data, isSelected }: PaneProps) {
+export function Stack({ cursorBranch, data, isSelected }: StackProps) {
+	// Build a tree structure from the branch map
+	const buildBranchTree = () => {
+		const branches: Array<{ name: string; depth: number; isLast: Array<boolean>; isCurrent: boolean }> = [];
+		
+		// Helper to add branches recursively
+		const addBranch = (branchName: string, depth: number, isLast: Array<boolean>) => {
+			const branch = data.branchMap.get(branchName);
+			if (!branch) return;
+			
+			branches.push({
+				name: branchName,
+				depth,
+				isLast: [...isLast],
+				isCurrent: branchName === data.currentBranch
+			});
+			
+			// Find children
+			const children = Array.from(data.branchMap.values())
+				.filter(b => b.parent === branchName)
+				.map(b => b.name);
+			
+			children.forEach((child, index) => {
+				const childIsLast = [...isLast, index === children.length - 1];
+				addBranch(child, depth + 1, childIsLast);
+			});
+		};
+		
+		// Start with trunk
+		addBranch(data.trunkName, 0, []);
+		return branches;
+	};
+	
+	const branches = buildBranchTree();
+	
+	const renderBranchLine = (branch: { name: string; depth: number; isLast: Array<boolean>; isCurrent: boolean }) => {
+		let prefix = "";
+		
+		// Build the tree prefix
+		for (let i = 0; i < branch.depth; i++) {
+			if (i === branch.depth - 1) {
+				// Last level - show connection
+				if (branch.isLast[i]) {
+					prefix += "└─";
+				} else {
+					prefix += "├─";
+				}
+			} else {
+				// Middle levels - show vertical lines or spaces
+				if (branch.isLast[i]) {
+					prefix += "  ";
+				} else {
+					prefix += "│ ";
+				}
+			}
+		}
+		
+		// Add the branch indicator
+		const indicator = branch.isCurrent ? "◉" : "◯";
+		const fullLine = `${prefix}${indicator} ${branch.name}`;
+		
+		const isSelectedBranch = isSelected && branch.name === cursorBranch;
+		
+		return (
+			<Text 
+				key={branch.name}
+				color={isSelectedBranch ? "black" : "white"}
+				{...(isSelectedBranch && { backgroundColor: "cyan" })}
+				bold={isSelectedBranch}
+			>
+				{fullLine}
+			</Text>
+		);
+	};
+	
 	return (
 		<Box 
 			flexGrow={1} 
@@ -29,29 +108,17 @@ export function Stack({ data, isSelected }: PaneProps) {
 		>
 			<Box flexDirection="column">
 				<Text color={isSelected ? "cyan" : "white"} bold={isSelected}>
-					[1] Stack (gt ls) {isSelected && "← selected"}
+					[1] Stack {isSelected && "← selected"}
 				</Text>
-				<Box marginTop={1}>
-					<Text color="gray">Trunk: {data.trunkName}</Text>
-					<Text color="gray">Current: {data.currentBranch}</Text>
-					<Text color="gray">Total branches: {data.branchMap.size}</Text>
-					<Text color="gray"> </Text>
-					<Text color="gray">Keybinds:</Text>
-					<Text color="gray">arrow keys → navigate</Text>
-					<Text color="gray">space → checkout</Text>
-					<Text color="gray">b → bottom</Text>
-					<Text color="gray">t → top</Text>
-					<Text color="gray">d → delete</Text>
-					<Text color="gray">r → rename</Text>
-					<Text color="gray">squash?</Text>
-					<Text color="gray">split?</Text>
+				<Box marginTop={1} flexDirection="column">
+					{branches.map((branch) => renderBranchLine(branch))}
 				</Box>
 			</Box>
 		</Box>
 	);
 }
 
-export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps) {
+export function Commits({ cursorCommit, data, isSelected }: CommitsProps) {
 	const currentBranchInfo = data.branchMap.get(data.currentBranch);
 	
 	// Generate some colors for commit hashes (similar to lazygit)
@@ -72,8 +139,8 @@ export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps)
 				<Box marginTop={1}>
 					{currentBranchInfo ? (
 						<Box flexDirection="column">
-							{currentBranchInfo.commits.map((commit, index) => {
-								const isSelectedCommit = isSelected && index === selectedCommitIndex;
+							{currentBranchInfo.commits.map((commit) => {
+								const isSelectedCommit = isSelected && commit.hash === cursorCommit;
 								
 								return (
 									<Text 
@@ -96,9 +163,10 @@ export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps)
 	);
 }
 
-export function Viewer({ data, isSelected, selectedCommitIndex, showAsciiArt }: ViewerProps) {
+export function Viewer({ cursorBranch, cursorCommit, data, isSelected, showAsciiArt }: ViewerProps) {
 	const currentBranchInfo = data.branchMap.get(data.currentBranch);
-	const selectedCommit = currentBranchInfo?.commits[selectedCommitIndex];
+	const selectedCommit = currentBranchInfo?.commits.find(commit => commit.hash === cursorCommit);
+	const selectedBranchInfo = cursorBranch ? data.branchMap.get(cursorBranch) : undefined;
 	
 	return (
 		<Box 
@@ -137,6 +205,12 @@ export function Viewer({ data, isSelected, selectedCommitIndex, showAsciiArt }: 
 								<Text color="gray">Graphite Terminal User Interface</Text>
 							</Box>
 						</Box>
+					) : selectedBranchInfo ? (
+						<Box flexDirection="column">
+							{selectedBranchInfo.gtLogS.split('\n').map((line, index) => (
+								<Text key={`${index}-${line}`} color="gray">{line}</Text>
+							))}
+						</Box>
 					) : selectedCommit ? (
 						<Box flexDirection="column">
 							{selectedCommit.patch.split('\n').map((line, index) => (
@@ -144,7 +218,7 @@ export function Viewer({ data, isSelected, selectedCommitIndex, showAsciiArt }: 
 							))}
 						</Box>
 					) : (
-						<Text color="gray">Select a commit to view patch</Text>
+						<Text color="gray">Select a branch or commit to view details</Text>
 					)}
 				</Box>
 			</Box>

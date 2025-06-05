@@ -9,12 +9,39 @@ export default function App() {
 	const pane = useAppStore((state) => state.pane);
 	const setPane = useAppStore((state) => state.setPane);
 	const commandLog = useAppStore((state) => state.commandLog);
-	const selectedCommitIndex = useAppStore((state) => state.selectedCommitIndex);
-	const setSelectedCommitIndex = useAppStore((state) => state.setSelectedCommitIndex);
+	const cursorBranch = useAppStore((state) => state.cursorBranch);
+	const cursorCommit = useAppStore((state) => state.cursorCommit);
+	const setCursorBranch = useAppStore((state) => state.setCursorBranch);
+	const setCursorCommit = useAppStore((state) => state.setCursorCommit);
 
 	// Get full terminal dimensions
 	const terminalWidth = stdout.columns || 80;
 	const terminalHeight = stdout.rows || 24;
+
+	// Helper to build branch list for navigation
+	const buildBranchList = () => {
+		const branches: Array<string> = [];
+		const addBranch = (branchName: string) => {
+			const branch = mockFinalRequiredData.branchMap.get(branchName);
+			if (!branch) return;
+			
+			branches.push(branchName);
+			
+			// Find children
+			const children = Array.from(mockFinalRequiredData.branchMap.values())
+				.filter(b => b.parent === branchName)
+				.map(b => b.name);
+			
+			for (const child of children) {
+				addBranch(child);
+			}
+		};
+		
+		addBranch(mockFinalRequiredData.trunkName);
+		return branches;
+	};
+
+	const branches = buildBranchList();
 
 	useInput((input, key) => {
 		if (input === "q" ) {
@@ -39,15 +66,37 @@ export default function App() {
 		}
 
 		// Handle navigation within panes
-		if (pane === "commits") {
-			const currentBranchInfo = mockFinalRequiredData.branchMap.get(mockFinalRequiredData.currentBranch);
-			const maxCommits = currentBranchInfo?.commits.length || 0;
+		if (pane === "stack") {
+			const currentIndex = cursorBranch ? branches.indexOf(cursorBranch) : 0;
 			
 			if (key.upArrow || input === "k") {
-				setSelectedCommitIndex(Math.max(0, selectedCommitIndex - 1));
+				const newIndex = Math.max(0, currentIndex - 1);
+				setCursorBranch(branches[newIndex]);
 			}
 			if (key.downArrow || input === "j") {
-				setSelectedCommitIndex(Math.min(maxCommits - 1, selectedCommitIndex + 1));
+				const newIndex = Math.min(branches.length - 1, currentIndex + 1);
+				setCursorBranch(branches[newIndex]);
+			}
+			if (input === " ") {
+				// Space to checkout - just log for now
+				console.log(`Would checkout branch: ${cursorBranch}`);
+			}
+		}
+
+		if (pane === "commits") {
+			const currentBranchInfo = mockFinalRequiredData.branchMap.get(mockFinalRequiredData.currentBranch);
+			if (currentBranchInfo) {
+				const commits = currentBranchInfo.commits;
+				const currentIndex = cursorCommit ? commits.findIndex(c => c.hash === cursorCommit) : 0;
+				
+				if (key.upArrow || input === "k") {
+					const newIndex = Math.max(0, currentIndex - 1);
+					setCursorCommit(commits[newIndex].hash);
+				}
+				if (key.downArrow || input === "j") {
+					const newIndex = Math.min(commits.length - 1, currentIndex + 1);
+					setCursorCommit(commits[newIndex].hash);
+				}
 			}
 		}
 	});
@@ -73,13 +122,17 @@ export default function App() {
 				{/* Left column */}
 				<Box flexDirection="column" width="50%">
 					{/* Stack pane (top left) */}
-					<Stack isSelected={pane === "stack"} data={mockFinalRequiredData} />
+					<Stack 
+						isSelected={pane === "stack"} 
+						data={mockFinalRequiredData} 
+						cursorBranch={cursorBranch}
+					/>
 
 					{/* Commits pane (bottom left) */}
 					<Commits 
 						isSelected={pane === "commits"} 
 						data={mockFinalRequiredData} 
-						selectedCommitIndex={selectedCommitIndex}
+						cursorCommit={cursorCommit}
 					/>
 				</Box>
 
@@ -89,7 +142,8 @@ export default function App() {
 					<Viewer 
 						isSelected={pane === "viewer"} 
 						data={mockFinalRequiredData} 
-						selectedCommitIndex={selectedCommitIndex}
+						cursorCommit={cursorCommit}
+						cursorBranch={cursorBranch}
 						showAsciiArt={pane === "header"}
 					/>
 

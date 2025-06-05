@@ -18,6 +18,7 @@ export type BranchInfo = {
 	prStatus: string;
 	currentVersion: number;
 	remoteVersion: number;
+	gtLogS: string;
 };
 export type TreeNode<T> = {
 	data: T;
@@ -184,6 +185,48 @@ export const mockFinalRequiredData: FinalRequiredData = (() => {
 			prStatus: prNumber === 0 ? "" : prStatuses[Math.floor(Math.random() * prStatuses.length)],
 			currentVersion: Math.floor(Math.random() * 10) + 1,
 			remoteVersion: Math.floor(Math.random() * 10) + 1,
+			gtLogS: `◉ rhys/dmns-1291-having-edit-open-adding-a-domain-will-open-edit-on-the-newly (current)
+│ 2 days ago
+│
+│ PR #46596 (Required checks failed) [project domains page]: remove id property which is not being sent to client
+│ https://app.graphite.dev/github/pr/vercel/front/46596
+│ Last submitted version: v2 (remote at v5, need get)
+│
+│ 48c43cb5801 - [project domains page]: remove id wophich is not being sent to client
+│
+◯ rhys/dmns-1290-clear-search-bar-after-entering-a-domain
+│ 2 days ago
+│
+│ PR #46595 (Required checks failed) [project domains page]: clear search on enter domain name
+│ https://app.graphite.dev/github/pr/vercel/front/46595
+│ Last submitted version: v2 (remote at v5, need get)
+│
+│ de2ee5b8b34 - [project domains page]: clear search on enter domain name
+│
+◯ rhys/dmns-1251-get-rid-of-enable-vercel-dns-button-clicking-on-the-tab-is (needs restack)
+│ 2 days ago
+│
+│ PR #46369 (Required checks failed) [project domains page]: auto enable vercel dns, style fixes, fix no-redirect flash
+│ https://app.graphite.dev/github/pr/vercel/front/46369
+│ Last submitted version: v11 (remote at v14, need get)
+│
+│ b88a855f936 - [project domains page]: auto enable vercel dns
+│
+◯ rhys/dmns-1231-if-invalid-configuration-show-dns-config-inline (needs restack)
+│ 2 days ago
+│
+│ PR #46081 (Merge conflicts) [project domains page]: show status inline
+│ https://app.graphite.dev/github/pr/vercel/front/46081
+│ Last submitted version: v21 (remote at v22, need get)
+│
+│ b09cd838fb7 - [project domains page]: put add domain in a modal (#46084)
+│ 83a4421c18b - [project domains page]: show status inline
+│
+◯ main
+│ 4 hours ago
+│
+│ 7b1b19ed731 - [dash] Find 9 (#46855)
+│`,
 		});
 	}
 	
