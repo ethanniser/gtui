@@ -1,5 +1,7 @@
 import { Text, Box, useInput, useApp, useStdout } from "ink";
 import { useAppStore } from "./state.js";
+import { Stack, Commits, Viewer, CommandLog } from "./ui.js";
+import { mockFinalRequiredData } from "./data.js";
 
 export default function App() {
 	const { exit } = useApp();
@@ -7,13 +9,15 @@ export default function App() {
 	const pane = useAppStore((state) => state.pane);
 	const setPane = useAppStore((state) => state.setPane);
 	const commandLog = useAppStore((state) => state.commandLog);
+	const selectedCommitIndex = useAppStore((state) => state.selectedCommitIndex);
+	const setSelectedCommitIndex = useAppStore((state) => state.setSelectedCommitIndex);
 
-	// Get full terminal dimensions (leave space for potential terminal chrome)
+	// Get full terminal dimensions
 	const terminalWidth = stdout.columns || 80;
-	const terminalHeight = (stdout.rows || 24) - 1;
+	const terminalHeight = stdout.rows || 24;
 
 	useInput((input, key) => {
-		if (input === "q" || key.escape) {
+		if (input === "q" ) {
 			exit();
 		}
 
@@ -29,6 +33,19 @@ export default function App() {
 		}
 		if (input === "4") {
 			setPane("log");
+		}
+
+		// Handle navigation within panes
+		if (pane === "commits") {
+			const currentBranchInfo = mockFinalRequiredData.branchMap.get(mockFinalRequiredData.currentBranch);
+			const maxCommits = currentBranchInfo?.commits.length || 0;
+			
+			if (key.upArrow || input === "k") {
+				setSelectedCommitIndex(Math.max(0, selectedCommitIndex - 1));
+			}
+			if (key.downArrow || input === "j") {
+				setSelectedCommitIndex(Math.min(maxCommits - 1, selectedCommitIndex + 1));
+			}
 		}
 	});
 
@@ -49,91 +66,23 @@ export default function App() {
 				{/* Left column */}
 				<Box flexDirection="column" width="50%">
 					{/* Stack pane (top left) */}
-					<Box 
-						flexGrow={1} 
-						borderStyle="round" 
-						borderColor={pane === "stack" ? "cyan" : "gray"}
-						marginRight={1}
-						marginBottom={1}
-						paddingX={1}
-					>
-						<Box flexDirection="column">
-							<Text color={pane === "stack" ? "cyan" : "white"} bold={pane === "stack"}>
-								[1] Stack (gt ls) {pane === "stack" && "← selected"}
-							</Text>
-							<Box marginTop={1}>
-								<Text color="gray">Stack content will go here...</Text>
-								<Text color="gray">Keybinds:</Text>
-								<Text color="gray">arrow keys → navigate</Text>
-								<Text color="gray">space → checkout</Text>
-								<Text color="gray">b → bottom</Text>
-								<Text color="gray">t → top</Text>
-								<Text color="gray">d → delete</Text>
-								<Text color="gray">r → rename</Text>
-								<Text color="gray">squash?</Text>
-								<Text color="gray">split?</Text>
-							</Box>
-						</Box>
-					</Box>
+					<Stack isSelected={pane === "stack"} data={mockFinalRequiredData} />
 
 					{/* Commits pane (bottom left) */}
-					<Box 
-						flexGrow={1} 
-						borderStyle="round" 
-						borderColor={pane === "commits" ? "cyan" : "gray"}
-						marginRight={1}
-						paddingX={1}
-					>
-						<Box flexDirection="column">
-							<Text color={pane === "commits" ? "cyan" : "white"} bold={pane === "commits"}>
-								[2] Commits {pane === "commits" && "← selected"}
-							</Text>
-							<Box marginTop={1}>
-								<Text color="gray">Commits content will go here...</Text>
-							</Box>
-						</Box>
-					</Box>
+					<Commits 
+						isSelected={pane === "commits"} 
+						data={mockFinalRequiredData} 
+						selectedCommitIndex={selectedCommitIndex}
+					/>
 				</Box>
 
 				{/* Right column */}
 				<Box flexDirection="column" width="50%">
 					{/* Viewer pane (top right) */}
-					<Box 
-						flexGrow={2} 
-						borderStyle="round" 
-						borderColor={pane === "viewer" ? "cyan" : "gray"}
-						marginBottom={1}
-						paddingX={1}
-					>
-						<Box flexDirection="column">
-							<Text color={pane === "viewer" ? "cyan" : "white"} bold={pane === "viewer"}>
-								[3] Viewer {pane === "viewer" && "← selected"}
-							</Text>
-							<Box marginTop={1}>
-								<Text color="gray">stack tab → gt log -s</Text>
-								<Text color="gray">commit tab → patch of commit</Text>
-								<Text color="gray"> </Text>
-								<Text color="gray">Viewer content will go here...</Text>
-							</Box>
-						</Box>
-					</Box>
+					<Viewer isSelected={pane === "viewer"} data={mockFinalRequiredData} />
 
 					{/* Command log pane (bottom right) */}
-					<Box 
-						flexGrow={1} 
-						borderStyle="round" 
-						borderColor={pane === "log" ? "cyan" : "gray"}
-						paddingX={1}
-					>
-						<Box flexDirection="column">
-							<Text color={pane === "log" ? "cyan" : "white"} bold={pane === "log"}>
-								[4] Command Log {pane === "log" && "← selected"}
-							</Text>
-							<Box marginTop={1}>
-								<Text color="gray">Command log will go here...</Text>
-							</Box>
-						</Box>
-					</Box>
+					<CommandLog isSelected={pane === "log"} />
 				</Box>
 			</Box>
 
