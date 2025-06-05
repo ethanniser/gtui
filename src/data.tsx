@@ -7,7 +7,11 @@ export type BranchName = string;
 export type BranchInfo = {
 	name: string;
 	parent: string;
-	commits: Array<string>;
+	commits: Array<{
+		hash: string;
+		message: string;
+		patch: string
+	}>;
 	children: string;
 	prNumber: number;
 	prStatus: string;
