@@ -2,6 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Effect, pipe } from "effect";
 import { Command } from "@effect/platform";
 import { NodeContext } from "@effect/platform-node";
+import { parseExtractedGraphiteData } from "./graphite-parser.js";
 
 export type BranchName = string;
 export type BranchInfo = {
@@ -67,7 +68,6 @@ export const gtLogSOptions = (branchName: string) =>
 				Effect.runPromise,
 			),
 	});
-
 // Mock data for development
 function createMockCommits(count: number, branchName: string) {
 	const commits = [];
@@ -194,4 +194,12 @@ export const mockFinalRequiredData: FinalRequiredData = (() => {
 		tree: buildTreeFromBranches(branches)
 	};
 })();
+// Graphite data parsing (from extracted .git folder)
+export const graphiteDataOptions = queryOptions({
+	queryKey: ["graphite-data"],
+	// change to .git later in prod lollllll
+	queryFn: () => Effect.runPromise(parseExtractedGraphiteData("gt-extracted")),
+});
+
+export const useGraphiteData = () => useQuery(graphiteDataOptions);
 
