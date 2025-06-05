@@ -126,7 +126,7 @@ const createCommitInfo = (hash: string, branchName: string) => ({
 const buildBranchMap = (
   snapshot: GraphiteSnapshot,
   prInfo: GraphitePRInfo
-) => Effect.gen(function* () {
+) => {
   const branchMap = new Map<BranchName, BranchInfo>();
   
   const prLookup = new Map<string, typeof prInfo.prInfos[0]>();
@@ -172,7 +172,7 @@ const buildBranchMap = (
   }
   
   return branchMap;
-});
+};
 
 const buildTree = (branchMap: Map<BranchName, BranchInfo>, trunkName: string) =>
   Effect.gen(function* () {
@@ -217,7 +217,7 @@ export const parseGraphiteData = (graphiteDir: string) =>
     const snapshot = yield* readLatestSnapshot(graphiteDir);
     const prInfo = yield* readPRInfo(graphiteDir);
     
-    const branchMap = yield* buildBranchMap(snapshot, prInfo);
+    const branchMap = buildBranchMap(snapshot, prInfo);
     const tree = yield* buildTree(branchMap, repoConfig.trunk);
     
     const result: FinalRequiredData = {
