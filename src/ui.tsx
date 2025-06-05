@@ -12,6 +12,10 @@ interface CommitsProps extends PaneProps {
 	selectedCommitIndex: number;
 }
 
+interface ViewerProps extends PaneProps {
+	selectedCommitIndex: number;
+}
+
 export function Stack({ data, isSelected }: PaneProps) {
 	return (
 		<Box 
@@ -66,33 +70,22 @@ export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps)
 				</Text>
 				<Box marginTop={1}>
 					{currentBranchInfo ? (
-						<>
-							<Text color="gray">Branch: {currentBranchInfo.name}</Text>
-							<Text color="gray">Commits: {currentBranchInfo.commits.length}</Text>
-							<Text color="gray"> </Text>
-							<Box flexDirection="column">
-								{currentBranchInfo.commits.map((commit, index) => {
-									const isSelectedCommit = isSelected && index === selectedCommitIndex;
-									
-									return (
-										<Text 
-											key={commit.hash}
-											color={isSelectedCommit ? "black" : "white"}
-											{...(isSelectedCommit && { backgroundColor: "cyan" })}
-											bold={isSelectedCommit}
-										>
-											{commit.hash.substring(0, 7)} {commit.message}
-										</Text>
-									);
-								})}
-							</Box>
-							{isSelected && (
-								<>
-									<Text color="gray"> </Text>
-									<Text color="gray">Use ↑/↓ or j/k to navigate</Text>
-								</>
-							)}
-						</>
+						<Box flexDirection="column">
+							{currentBranchInfo.commits.map((commit, index) => {
+								const isSelectedCommit = isSelected && index === selectedCommitIndex;
+								
+								return (
+									<Text 
+										key={commit.hash}
+										color={isSelectedCommit ? "black" : "white"}
+										{...(isSelectedCommit && { backgroundColor: "cyan" })}
+										bold={isSelectedCommit}
+									>
+										{commit.hash.substring(0, 7)} {commit.message}
+									</Text>
+								);
+							})}
+						</Box>
 					) : (
 						<Text color="gray">No commits found for current branch</Text>
 					)}
@@ -102,8 +95,9 @@ export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps)
 	);
 }
 
-export function Viewer({ data, isSelected }: PaneProps) {
+export function Viewer({ data, isSelected, selectedCommitIndex }: ViewerProps) {
 	const currentBranchInfo = data.branchMap.get(data.currentBranch);
+	const selectedCommit = currentBranchInfo?.commits[selectedCommitIndex];
 	
 	return (
 		<Box 
@@ -118,17 +112,12 @@ export function Viewer({ data, isSelected }: PaneProps) {
 					[3] Viewer {isSelected && "← selected"}
 				</Text>
 				<Box marginTop={1}>
-					<Text color="gray">stack tab → gt log -s</Text>
-					<Text color="gray">commit tab → patch of commit</Text>
-					<Text color="gray"> </Text>
-					{currentBranchInfo && currentBranchInfo.commits.length > 0 ? (
-						<>
-							<Text color="yellow">Latest commit:</Text>
-							<Text color="white">{currentBranchInfo.commits[0].message}</Text>
-							<Text color="gray"> </Text>
-							<Text color="cyan">Patch preview:</Text>
-							<Text color="gray">{currentBranchInfo.commits[0].patch.split('\n').slice(0, 5).join('\n')}...</Text>
-						</>
+					{selectedCommit ? (
+						<Box flexDirection="column">
+							{selectedCommit.patch.split('\n').map((line, index) => (
+								<Text key={`${index}-${line}`} color="gray">{line}</Text>
+							))}
+						</Box>
 					) : (
 						<Text color="gray">Select a commit to view patch</Text>
 					)}

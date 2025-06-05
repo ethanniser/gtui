@@ -79,7 +79,11 @@ export default function App() {
 				{/* Right column */}
 				<Box flexDirection="column" width="50%">
 					{/* Viewer pane (top right) */}
-					<Viewer isSelected={pane === "viewer"} data={mockFinalRequiredData} />
+					<Viewer 
+						isSelected={pane === "viewer"} 
+						data={mockFinalRequiredData} 
+						selectedCommitIndex={selectedCommitIndex}
+					/>
 
 					{/* Command log pane (bottom right) */}
 					<CommandLog isSelected={pane === "log"} />
