@@ -217,9 +217,10 @@ export const parseGraphiteData = (graphiteDir: string) =>
     const snapshot = yield* readLatestSnapshot(graphiteDir);
     const prInfo = yield* readPRInfo(graphiteDir);
     
+    
     const branchMap = buildBranchMap(snapshot, prInfo);
     const tree = yield* buildTree(branchMap, repoConfig.trunk);
-    
+
     const result: FinalRequiredData = {
       trunkName: repoConfig.trunk,
       currentBranch: snapshot.currentBranchName,

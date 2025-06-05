@@ -18,7 +18,6 @@ export type BranchInfo = {
 	prStatus: string;
 	currentVersion: number;
 	remoteVersion: number;
-	gtLogS: string;
 };
 export type TreeNode<T> = {
 	data: T;
@@ -55,20 +54,6 @@ export const currentBranchOptions = queryOptions({
 		getCurrentBranch.pipe(Effect.provide(NodeContext.layer), Effect.runPromise),
 });
 
-export const gtLogS = Effect.fnUntraced(function* (branchName: string) {
-	const output = yield* runCommand("gt", "log", "-s");
-	return output.join("\n");
-});
-
-export const gtLogSOptions = (branchName: string) =>
-	queryOptions({
-		queryKey: ["gt-log-s", branchName],
-		queryFn: () =>
-			gtLogS(branchName).pipe(
-				Effect.provide(NodeContext.layer),
-				Effect.runPromise,
-			),
-	});
 
 // Graphite data parsing (from extracted .git folder)
 export const graphiteDataOptions = queryOptions({

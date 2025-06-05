@@ -1,4 +1,5 @@
 import { Text, Box, useInput, useApp, useStdout } from "ink";
+import { useEffect } from "react";
 import { useAppStore } from "./state.js";
 import { Stack, Commits, Viewer, CommandLog } from "./ui.js";
 import { useGraphiteData } from "./data.js";
@@ -76,7 +77,7 @@ export default function App() {
 	);
 }
 
-export function AppInner() {
+function AppInner() {
 	const { exit } = useApp();
 	const { stdout } = useStdout();
 	const pane = useAppStore((state) => state.pane);
@@ -86,6 +87,8 @@ export function AppInner() {
 	const cursorCommit = useAppStore((state) => state.cursorCommit);
 	const setCursorBranch = useAppStore((state) => state.setCursorBranch);
 	const setCursorCommit = useAppStore((state) => state.setCursorCommit);
+	const scrollPositions = useAppStore((state) => state.scrollPositions);
+	const setScrollPosition = useAppStore((state) => state.setScrollPosition);
 
 	// Get real graphite data
 	const { data, error, isLoading } = useGraphiteData();
@@ -93,27 +96,15 @@ export function AppInner() {
 	// Get full terminal dimensions
 	const terminalWidth = stdout.columns || 80;
 	const terminalHeight = stdout.rows || 24;
-
-	// Handle loading and error states
-	if (isLoading) {
-		return (
-			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
-				<Text color="cyan">Loading graphite data...</Text>
-			</Box>
-		);
-	}
-
-	if (error || !data) {
-		return (
-			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
-				<Text color="red">Error loading graphite data: {error?.message || "Unknown error"}</Text>
-				<Text color="gray">Press 'q' to quit</Text>
-			</Box>
-		);
-	}
+	
+	// Calculate pane heights (roughly 1/4 each, accounting for header and borders)
+	const headerHeight = 3; // Header box with borders
+	const availableHeight = terminalHeight - headerHeight - 2; // -2 for margins
+	const paneHeight = Math.floor(availableHeight / 2); // Two rows of panes
 
 	// Helper to build branch list for navigation
 	const buildBranchList = () => {
+		if (!data) return [];
 		const branches: Array<string> = [];
 		const addBranch = (branchName: string) => {
 			const branch = data.branchMap.get(branchName);
@@ -137,10 +128,21 @@ export function AppInner() {
 
 	const branches = buildBranchList();
 
+	// Initialize cursor to current branch when data loads
+	useEffect(() => {
+		if (data && !cursorBranch) {
+			setCursorBranch(data.currentBranch);
+		}
+	}, [data, cursorBranch, setCursorBranch]);
+
+	// Move useInput hook to the top to maintain consistent hook call order
 	useInput((input, key) => {
 		if (input === "q" ) {
 			exit();
 		}
+
+		// Only handle navigation if data is loaded
+		if (!data) return;
 
 		// Navigate between panes
 		if (input === "0") {
@@ -166,10 +168,22 @@ export function AppInner() {
 			if (key.upArrow || input === "k") {
 				const newIndex = Math.max(0, currentIndex - 1);
 				setCursorBranch(branches[newIndex]);
+				
+				// Auto-scroll to keep cursor visible
+				const visibleLines = paneHeight - 4; // Account for borders and title
+				if (newIndex < scrollPositions.stack) {
+					setScrollPosition("stack", newIndex);
+				}
 			}
 			if (key.downArrow || input === "j") {
 				const newIndex = Math.min(branches.length - 1, currentIndex + 1);
 				setCursorBranch(branches[newIndex]);
+				
+				// Auto-scroll to keep cursor visible
+				const visibleLines = paneHeight - 4;
+				if (newIndex >= scrollPositions.stack + visibleLines) {
+					setScrollPosition("stack", Math.max(0, newIndex - visibleLines + 1));
+				}
 			}
 			if (input === " ") {
 				// Space to checkout - just log for now
@@ -186,14 +200,66 @@ export function AppInner() {
 				if (key.upArrow || input === "k") {
 					const newIndex = Math.max(0, currentIndex - 1);
 					setCursorCommit(commits[newIndex].hash);
+					
+					// Auto-scroll to keep cursor visible
+					const visibleLines = paneHeight - 4;
+					if (newIndex < scrollPositions.commits) {
+						setScrollPosition("commits", newIndex);
+					}
 				}
 				if (key.downArrow || input === "j") {
 					const newIndex = Math.min(commits.length - 1, currentIndex + 1);
 					setCursorCommit(commits[newIndex].hash);
+					
+					// Auto-scroll to keep cursor visible
+					const visibleLines = paneHeight - 4;
+					if (newIndex >= scrollPositions.commits + visibleLines) {
+						setScrollPosition("commits", Math.max(0, newIndex - visibleLines + 1));
+					}
 				}
 			}
 		}
+
+		// Handle scrolling in viewer and log panes (without cursor navigation)
+		if (pane === "viewer") {
+			if (key.upArrow || input === "k") {
+				setScrollPosition("viewer", Math.max(0, scrollPositions.viewer - 1));
+			}
+			if (key.downArrow || input === "j") {
+				// Estimate max content - this will be bounded by the component
+				setScrollPosition("viewer", scrollPositions.viewer + 1);
+			}
+		}
+
+		if (pane === "log") {
+			const maxLogLines = 12; // Approximate based on mock data
+			if (key.upArrow || input === "k") {
+				setScrollPosition("log", Math.max(0, scrollPositions.log - 1));
+			}
+			if (key.downArrow || input === "j") {
+				const maxScroll = Math.max(0, maxLogLines - (paneHeight - 4));
+				setScrollPosition("log", Math.min(maxScroll, scrollPositions.log + 1));
+			}
+		}
 	});
+
+	// Handle loading and error states
+	if (isLoading) {
+		return (
+			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
+				<Text color="cyan">Loading graphite data...</Text>
+			</Box>
+		);
+	}
+
+	if (error || !data) {
+		return (
+			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
+				<Text color="red">Error loading graphite data: {error?.message || "Unknown error"}</Text>
+				<Text color="gray">Press 'q' to quit</Text>
+			</Box>
+		);
+	}
 
 	return (
 		<Box flexDirection="column" height={terminalHeight} width={terminalWidth}>
@@ -220,6 +286,8 @@ export function AppInner() {
 						isSelected={pane === "stack"} 
 						data={data} 
 						cursorBranch={cursorBranch}
+						height={paneHeight}
+						scrollPosition={scrollPositions.stack}
 					/>
 
 					{/* Commits pane (bottom left) */}
@@ -227,6 +295,8 @@ export function AppInner() {
 						isSelected={pane === "commits"} 
 						data={data} 
 						cursorCommit={cursorCommit}
+						height={paneHeight}
+						scrollPosition={scrollPositions.commits}
 					/>
 				</Box>
 
@@ -239,10 +309,16 @@ export function AppInner() {
 						cursorCommit={cursorCommit}
 						cursorBranch={cursorBranch}
 						showAsciiArt={pane === "header"}
+						height={paneHeight}
+						scrollPosition={scrollPositions.viewer}
 					/>
 
 					{/* Command log pane (bottom right) */}
-					<CommandLog isSelected={pane === "log"} />
+					<CommandLog 
+						isSelected={pane === "log"}
+						height={paneHeight}
+						scrollPosition={scrollPositions.log}
+					/>
 				</Box>
 			</Box>
 		</Box>
