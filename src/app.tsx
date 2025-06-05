@@ -1,9 +1,82 @@
 import { Text, Box, useInput, useApp, useStdout } from "ink";
 import { useAppStore } from "./state.js";
 import { Stack, Commits, Viewer, CommandLog } from "./ui.js";
-import { mockFinalRequiredData } from "./data.js";
+import { useGraphiteData } from "./data.js";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ErrorBoundary } from "react-error-boundary";
+
+const queryClient = new QueryClient();
+
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+	useInput((input, key) => {
+		if (input === "r") {
+			resetErrorBoundary();
+		}
+	});
+
+	return (
+		<Box flexDirection="column" padding={2} height="100%" width="100%">
+			<Box borderStyle="round" borderColor="red" padding={1} marginBottom={1}>
+				<Text color="red" bold>
+					💥 Application Error
+				</Text>
+			</Box>
+			
+			<Box flexDirection="column" paddingX={1}>
+				<Text color="white" bold>
+					Error: {error.name || "Unknown Error"}
+				</Text>
+				<Text color="gray" wrap="wrap">
+					{error.message || "An unexpected error occurred"}
+				</Text>
+				
+				{error.stack && (
+					<Box flexDirection="column" marginTop={1}>
+						<Text color="yellow" bold>Stack Trace:</Text>
+						<Box paddingLeft={2} flexDirection="column">
+							{error.stack.split('\n').slice(0, 8).map((line, index) => (
+								<Text key={`stack-${index}-${line.slice(0, 20)}`} color="gray" dimColor>
+									{line}
+								</Text>
+							))}
+						</Box>
+					</Box>
+				)}
+			</Box>
+			
+			<Box marginTop={2} paddingX={1} flexDirection="column">
+				<Text color="cyan">
+					Press 'r' to retry or Ctrl+C to exit
+				</Text>
+			</Box>
+		</Box>
+	);
+}
+
+function Providers({ children }: { children: React.ReactNode }) {
+	return (
+		<QueryClientProvider client={queryClient}>
+			<ErrorBoundary 
+				FallbackComponent={ErrorFallback}
+				onError={(error, errorInfo) => {
+					console.error("Error caught by boundary:", error, errorInfo);
+				}}
+			>
+				{children}
+			</ErrorBoundary>
+		</QueryClientProvider>
+	);
+}
 
 export default function App() {
+	return (
+		<Providers>
+			<AppInner />
+		</Providers>
+	);
+}
+
+export function AppInner() {
 	const { exit } = useApp();
 	const { stdout } = useStdout();
 	const pane = useAppStore((state) => state.pane);
@@ -14,21 +87,42 @@ export default function App() {
 	const setCursorBranch = useAppStore((state) => state.setCursorBranch);
 	const setCursorCommit = useAppStore((state) => state.setCursorCommit);
 
+	// Get real graphite data
+	const { data, error, isLoading } = useGraphiteData();
+
 	// Get full terminal dimensions
 	const terminalWidth = stdout.columns || 80;
 	const terminalHeight = stdout.rows || 24;
+
+	// Handle loading and error states
+	if (isLoading) {
+		return (
+			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
+				<Text color="cyan">Loading graphite data...</Text>
+			</Box>
+		);
+	}
+
+	if (error || !data) {
+		return (
+			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
+				<Text color="red">Error loading graphite data: {error?.message || "Unknown error"}</Text>
+				<Text color="gray">Press 'q' to quit</Text>
+			</Box>
+		);
+	}
 
 	// Helper to build branch list for navigation
 	const buildBranchList = () => {
 		const branches: Array<string> = [];
 		const addBranch = (branchName: string) => {
-			const branch = mockFinalRequiredData.branchMap.get(branchName);
+			const branch = data.branchMap.get(branchName);
 			if (!branch) return;
 			
 			branches.push(branchName);
 			
 			// Find children
-			const children = Array.from(mockFinalRequiredData.branchMap.values())
+			const children = Array.from(data.branchMap.values())
 				.filter(b => b.parent === branchName)
 				.map(b => b.name);
 			
@@ -37,7 +131,7 @@ export default function App() {
 			}
 		};
 		
-		addBranch(mockFinalRequiredData.trunkName);
+		addBranch(data.trunkName);
 		return branches;
 	};
 
@@ -84,7 +178,7 @@ export default function App() {
 		}
 
 		if (pane === "commits") {
-			const currentBranchInfo = mockFinalRequiredData.branchMap.get(mockFinalRequiredData.currentBranch);
+			const currentBranchInfo = data.branchMap.get(data.currentBranch);
 			if (currentBranchInfo) {
 				const commits = currentBranchInfo.commits;
 				const currentIndex = cursorCommit ? commits.findIndex(c => c.hash === cursorCommit) : 0;
@@ -124,14 +218,14 @@ export default function App() {
 					{/* Stack pane (top left) */}
 					<Stack 
 						isSelected={pane === "stack"} 
-						data={mockFinalRequiredData} 
+						data={data} 
 						cursorBranch={cursorBranch}
 					/>
 
 					{/* Commits pane (bottom left) */}
 					<Commits 
 						isSelected={pane === "commits"} 
-						data={mockFinalRequiredData} 
+						data={data} 
 						cursorCommit={cursorCommit}
 					/>
 				</Box>
@@ -141,7 +235,7 @@ export default function App() {
 					{/* Viewer pane (top right) */}
 					<Viewer 
 						isSelected={pane === "viewer"} 
-						data={mockFinalRequiredData} 
+						data={data} 
 						cursorCommit={cursorCommit}
 						cursorBranch={cursorBranch}
 						showAsciiArt={pane === "header"}

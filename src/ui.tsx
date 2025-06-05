@@ -1,7 +1,7 @@
 import { Text, Box } from "ink";
 import { useQuery } from "@tanstack/react-query";
 import type { FinalRequiredData } from "./data.js";
-import { currentBranchOptions, gtLogSOptions, mockFinalRequiredData } from "./data.js";
+import { currentBranchOptions, gtLogSOptions } from "./data.js";
 
 interface PaneProps {
 	isSelected: boolean;
@@ -240,7 +240,7 @@ export function CommandLog({ isSelected }: { isSelected: boolean }) {
 				</Text>
 				<Box marginTop={1}>
 					<Text color="gray">$ gt status</Text>
-					<Text color="green">✓ On branch: {mockFinalRequiredData.currentBranch}</Text>
+					<Text color="green">✓ On branch: main</Text>
 					<Text color="gray">$ gt log --oneline</Text>
 					<Text color="white">abc1234 feat: add login validation</Text>
 					<Text color="gray">$ gt checkout feature/auth-login</Text>
