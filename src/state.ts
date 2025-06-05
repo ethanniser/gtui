@@ -5,7 +5,7 @@ type CommandRun = {
 	output: string;
 };
 type State = {
-	pane: "stack" | "commits" | "viewer" | "log";
+	pane: "header" | "stack" | "commits" | "viewer" | "log";
 	commandLog: Array<CommandRun>;
 	cursorBranch?: string;
 	cursorCommit?: string;
@@ -18,7 +18,7 @@ type Action = {
 };
 
 export const useAppStore = create<State & Action>((set) => ({
-	pane: "stack",
+	pane: "header",
 	commandLog: [],
 	selectedCommitIndex: 0,
 	setPane: (pane) => set({ pane }),

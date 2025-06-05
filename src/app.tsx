@@ -22,6 +22,9 @@ export default function App() {
 		}
 
 		// Navigate between panes
+		if (input === "0") {
+			setPane("header");
+		}
 		if (input === "1") {
 			setPane("stack");
 		}
@@ -52,12 +55,16 @@ export default function App() {
 	return (
 		<Box flexDirection="column" height={terminalHeight} width={terminalWidth}>
 			{/* Header */}
-			<Box borderStyle="round" borderColor="blue" paddingX={1}>
-				<Text color="blue" bold>
-					GTUI - Graphite TUI
+			<Box 
+				borderStyle="round" 
+				borderColor={pane === "header" ? "cyan" : "blue"} 
+				paddingX={1}
+			>
+				<Text color={pane === "header" ? "cyan" : "blue"} bold={pane === "header"}>
+					[0] GTUI - Graphite TUI {pane === "header" && "← selected"}
 				</Text>
 				<Box marginLeft={4}>
-					<Text color="gray">Press 1/2/3/4 to switch panes, 'q' to quit</Text>
+					<Text color="gray">Press 0/1/2/3/4 to switch panes, 'q' to quit</Text>
 				</Box>
 			</Box>
 
@@ -83,18 +90,12 @@ export default function App() {
 						isSelected={pane === "viewer"} 
 						data={mockFinalRequiredData} 
 						selectedCommitIndex={selectedCommitIndex}
+						showAsciiArt={pane === "header"}
 					/>
 
 					{/* Command log pane (bottom right) */}
 					<CommandLog isSelected={pane === "log"} />
 				</Box>
-			</Box>
-
-			{/* Footer */}
-			<Box borderStyle="round" borderColor="gray" paddingX={1} marginTop={1}>
-				<Text color="gray">
-					Current pane: {pane} • Press 1 (stack), 2 (commits), 3 (viewer), 4 (log) to switch
-				</Text>
 			</Box>
 		</Box>
 	);

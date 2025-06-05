@@ -14,6 +14,7 @@ interface CommitsProps extends PaneProps {
 
 interface ViewerProps extends PaneProps {
 	selectedCommitIndex: number;
+	showAsciiArt: boolean;
 }
 
 export function Stack({ data, isSelected }: PaneProps) {
@@ -95,7 +96,7 @@ export function Commits({ data, isSelected, selectedCommitIndex }: CommitsProps)
 	);
 }
 
-export function Viewer({ data, isSelected, selectedCommitIndex }: ViewerProps) {
+export function Viewer({ data, isSelected, selectedCommitIndex, showAsciiArt }: ViewerProps) {
 	const currentBranchInfo = data.branchMap.get(data.currentBranch);
 	const selectedCommit = currentBranchInfo?.commits[selectedCommitIndex];
 	
@@ -112,7 +113,31 @@ export function Viewer({ data, isSelected, selectedCommitIndex }: ViewerProps) {
 					[3] Viewer {isSelected && "← selected"}
 				</Text>
 				<Box marginTop={1}>
-					{selectedCommit ? (
+					{showAsciiArt ? (
+						<Box flexDirection="column" alignItems="center" justifyContent="center">
+							<Text color="cyan" bold>
+								 {" "}██████╗ ████████╗██╗   ██╗██╗
+							</Text>
+							<Text color="cyan" bold>
+								██╔════╝ ╚══██╔══╝██║   ██║██║
+							</Text>
+							<Text color="cyan" bold>
+								██║  ███╗   ██║   ██║   ██║██║
+							</Text>
+							<Text color="cyan" bold>
+								██║   ██║   ██║   ██║   ██║██║
+							</Text>
+							<Text color="cyan" bold>
+								╚██████╔╝   ██║   ╚██████╔╝██║
+							</Text>
+							<Text color="cyan" bold>
+								 {" "}╚═════╝    ╚═╝    ╚═════╝ ╚═╝
+							</Text>
+							<Box marginTop={2}>
+								<Text color="gray">Graphite Terminal User Interface</Text>
+							</Box>
+						</Box>
+					) : selectedCommit ? (
 						<Box flexDirection="column">
 							{selectedCommit.patch.split('\n').map((line, index) => (
 								<Text key={`${index}-${line}`} color="gray">{line}</Text>
