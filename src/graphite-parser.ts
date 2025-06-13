@@ -1,6 +1,5 @@
 import { Effect, Schema } from "effect";
 import { FileSystem } from "@effect/platform";
-import { NodeFileSystem } from "@effect/platform-node";
 import type { 
   BranchName, 
   BranchInfo, 
@@ -12,8 +11,8 @@ import type {
 const GraphiteRepoConfigSchema = Schema.Struct({
   trunk: Schema.String,
   trunks: Schema.Array(Schema.Struct({ name: Schema.String })),
-  lastFetchedPRInfoMs: Schema.Number,
-  lastFetchedFeatureFlagsInMs: Schema.Number,
+  lastFetchedPRInfoMs: Schema.optional(Schema.Number),
+  lastFetchedFeatureFlagsInMs: Schema.optional(Schema.Number),
 });
 
 const GraphiteSubmittedVersionSchema = Schema.Struct({
@@ -62,11 +61,8 @@ const GraphitePRInfoSchema = Schema.Struct({
   prInfos: Schema.Array(GraphitePRSchema),
 });
 
-type GraphiteRepoConfig = Schema.Schema.Type<typeof GraphiteRepoConfigSchema>;
 type GraphiteSnapshot = Schema.Schema.Type<typeof GraphiteSnapshotSchema>;
-type GraphiteBranchData = Schema.Schema.Type<typeof GraphiteBranchDataSchema>;
 type GraphitePRInfo = Schema.Schema.Type<typeof GraphitePRInfoSchema>;
-
 
 const readJsonFileWithSchema = <A, I, R>(
   filepath: string, 
@@ -217,7 +213,6 @@ export const parseGraphiteData = (graphiteDir: string) =>
     const snapshot = yield* readLatestSnapshot(graphiteDir);
     const prInfo = yield* readPRInfo(graphiteDir);
     
-    
     const branchMap = buildBranchMap(snapshot, prInfo);
     const tree = yield* buildTree(branchMap, repoConfig.trunk);
 
@@ -232,6 +227,4 @@ export const parseGraphiteData = (graphiteDir: string) =>
   });
 
 export const parseExtractedGraphiteData = (graphiteDir = "gt-extracted") =>
-  parseGraphiteData(graphiteDir).pipe(
-    Effect.provide(NodeFileSystem.layer)
-  );
+  parseGraphiteData(graphiteDir);

@@ -1,7 +1,7 @@
 import { Text, Box } from "ink";
-import { useQuery } from "@tanstack/react-query";
 import type { FinalRequiredData } from "./data.js";
-import { currentBranchOptions } from "./data.js";
+import { useRxValue } from "@effect-rx/rx-react";
+import { commandLogRx } from "./state.js";
 
 interface PaneProps {
 	isSelected: boolean;
@@ -383,14 +383,7 @@ export function Viewer({ cursorBranch, cursorCommit, data, height, isSelected, s
 
 export function CommandLog({ height, isSelected, scrollPosition = 0 }: { isSelected: boolean; height?: number; scrollPosition?: number }) {
 	// Mock command log data
-	const logEntries = [
-		{ command: "$ gt status", output: "✓ On branch: main", color: "green" },
-		{ command: "$ gt log --oneline", output: "abc1234 feat: add login validation", color: "white" },
-		{ command: "$ gt checkout feature/auth-login", output: "✓ Switched to branch 'feature/auth-login'", color: "green" },
-		{ command: "$ gt sync", output: "✓ Synced with remote", color: "green" },
-		{ command: "$ gt submit", output: "✓ Submitted PR #123", color: "green" },
-		{ command: "$ gt stack", output: "◉ feature/auth-login (current)", color: "cyan" },
-	];
+	const logEntries = useRxValue(commandLogRx);
 
 	// Flatten entries for scrolling
 	const allLines: Array<{ text: string; color: string }> = [];
