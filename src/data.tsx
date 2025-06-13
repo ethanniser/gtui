@@ -1,8 +1,8 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { Command } from "@effect/platform";
 import { NodeContext } from "@effect/platform-node";
 import { parseExtractedGraphiteData } from "./graphite-parser.js";
+import { Rx } from "@effect-rx/rx-react";
 
 export type BranchName = string;
 export type BranchInfo = {
@@ -48,19 +48,7 @@ export const getCurrentBranch = runCommand("git", "branch", "--show-current").pi
 	Effect.map((lines) => lines[0]),
 );
 
-export const currentBranchOptions = queryOptions({
-	queryKey: ["current-branch"],
-	queryFn: () =>
-		getCurrentBranch.pipe(Effect.provide(NodeContext.layer), Effect.runPromise),
-});
+const runtime = Rx.runtime(NodeContext.layer);
 
-
-// Graphite data parsing (from extracted .git folder)
-export const graphiteDataOptions = queryOptions({
-	queryKey: ["graphite-data"],
-	// change to .git later in prod lollllll
-	queryFn: () => Effect.runPromise(parseExtractedGraphiteData(".git")),
-});
-
-export const useGraphiteData = () => useQuery(graphiteDataOptions);
-
+export const currentBranchRx = runtime.rx(getCurrentBranch)
+export const graphiteDataRx = runtime.rx(parseExtractedGraphiteData(".git"));

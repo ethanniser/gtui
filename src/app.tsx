@@ -1,15 +1,15 @@
 import { Text, Box, useInput, useApp, useStdout } from "ink";
 import { useEffect } from "react";
-import { useAppStore } from "./state.js";
 import { Stack, Commits, Viewer, CommandLog } from "./ui.js";
-import { useGraphiteData } from "./data.js";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
+import { Result, useRx, useRxValue } from "@effect-rx/rx-react";
+import { cursorBranchRx, cursorCommitRx, paneRx, scrollPositionRx, useSetScroll } from "./state.js";
+import { graphiteDataRx } from "./data.js";
+import { Cause } from "effect";
 
-const queryClient = new QueryClient();
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
-	useInput((input, key) => {
+	useInput((input) => {
 		if (input === "r") {
 			resetErrorBoundary();
 		}
@@ -56,16 +56,14 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 
 function Providers({ children }: { children: React.ReactNode }) {
 	return (
-		<QueryClientProvider client={queryClient}>
-			<ErrorBoundary 
-				FallbackComponent={ErrorFallback}
-				onError={(error, errorInfo) => {
-					console.error("Error caught by boundary:", error, errorInfo);
-				}}
-			>
-				{children}
-			</ErrorBoundary>
-		</QueryClientProvider>
+		<ErrorBoundary 
+			FallbackComponent={ErrorFallback}
+			onError={(error, errorInfo) => {
+				console.error("Error caught by boundary:", error, errorInfo);
+			}}
+		>
+			{children}
+		</ErrorBoundary>
 	);
 }
 
@@ -80,18 +78,14 @@ export default function App() {
 function AppInner() {
 	const { exit } = useApp();
 	const { stdout } = useStdout();
-	const pane = useAppStore((state) => state.pane);
-	const setPane = useAppStore((state) => state.setPane);
-	const commandLog = useAppStore((state) => state.commandLog);
-	const cursorBranch = useAppStore((state) => state.cursorBranch);
-	const cursorCommit = useAppStore((state) => state.cursorCommit);
-	const setCursorBranch = useAppStore((state) => state.setCursorBranch);
-	const setCursorCommit = useAppStore((state) => state.setCursorCommit);
-	const scrollPositions = useAppStore((state) => state.scrollPositions);
-	const setScrollPosition = useAppStore((state) => state.setScrollPosition);
+	const [pane, setPane] = useRx(paneRx);
+	const [cursorBranch, setCursorBranch] = useRx(cursorBranchRx)
+	const [cursorCommit, setCursorCommit] = useRx(cursorCommitRx)
+	const scrollPositions = useRxValue(scrollPositionRx)
+	const setScrollPosition = useSetScroll()
 
 	// Get real graphite data
-	const { data, error, isLoading } = useGraphiteData();
+	const data = useRxValue(graphiteDataRx)
 
 	// Get full terminal dimensions
 	const terminalWidth = stdout.columns || 80;
@@ -104,16 +98,16 @@ function AppInner() {
 
 	// Helper to build branch list for navigation
 	const buildBranchList = () => {
-		if (!data) return [];
+		if (!Result.isSuccess(data)) return [];
 		const branches: Array<string> = [];
 		const addBranch = (branchName: string) => {
-			const branch = data.branchMap.get(branchName);
+			const branch = data.value.branchMap.get(branchName);
 			if (!branch) return;
 			
 			branches.push(branchName);
 			
 			// Find children
-			const children = Array.from(data.branchMap.values())
+			const children = Array.from(data.value.branchMap.values())
 				.filter(b => b.parent === branchName)
 				.map(b => b.name);
 			
@@ -122,7 +116,7 @@ function AppInner() {
 			}
 		};
 		
-		addBranch(data.trunkName);
+		addBranch(data.value.trunkName);
 		return branches;
 	};
 
@@ -130,8 +124,8 @@ function AppInner() {
 
 	// Initialize cursor to current branch when data loads
 	useEffect(() => {
-		if (data && !cursorBranch) {
-			setCursorBranch(data.currentBranch);
+		if (Result.isSuccess(data) && !cursorBranch) {
+			setCursorBranch(data.value.currentBranch);
 		}
 	}, [data, cursorBranch, setCursorBranch]);
 
@@ -142,7 +136,7 @@ function AppInner() {
 		}
 
 		// Only handle navigation if data is loaded
-		if (!data) return;
+		if (!Result.isSuccess(data)) return;
 
 		// Navigate between panes
 		if (input === "0") {
@@ -170,7 +164,6 @@ function AppInner() {
 				setCursorBranch(branches[newIndex]);
 				
 				// Auto-scroll to keep cursor visible
-				const visibleLines = paneHeight - 4; // Account for borders and title
 				if (newIndex < scrollPositions.stack) {
 					setScrollPosition("stack", newIndex);
 				}
@@ -192,7 +185,7 @@ function AppInner() {
 		}
 
 		if (pane === "commits") {
-			const currentBranchInfo = data.branchMap.get(data.currentBranch);
+			const currentBranchInfo = data.value.branchMap.get(data.value.currentBranch);
 			if (currentBranchInfo) {
 				const commits = currentBranchInfo.commits;
 				const currentIndex = cursorCommit ? commits.findIndex(c => c.hash === cursorCommit) : 0;
@@ -202,7 +195,6 @@ function AppInner() {
 					setCursorCommit(commits[newIndex].hash);
 					
 					// Auto-scroll to keep cursor visible
-					const visibleLines = paneHeight - 4;
 					if (newIndex < scrollPositions.commits) {
 						setScrollPosition("commits", newIndex);
 					}
@@ -244,7 +236,7 @@ function AppInner() {
 	});
 
 	// Handle loading and error states
-	if (isLoading) {
+	if (Result.isInitial(data)) {
 		return (
 			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
 				<Text color="cyan">Loading graphite data...</Text>
@@ -252,10 +244,10 @@ function AppInner() {
 		);
 	}
 
-	if (error || !data) {
+	if (Result.isFailure(data)) {
 		return (
 			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
-				<Text color="red">Error loading graphite data: {error?.message || "Unknown error"}</Text>
+				<Text color="red">Error loading graphite data: {Cause.pretty(data.cause)}</Text>
 				<Text color="gray">Press 'q' to quit</Text>
 			</Box>
 		);
@@ -284,7 +276,7 @@ function AppInner() {
 					{/* Stack pane (top left) */}
 					<Stack 
 						isSelected={pane === "stack"} 
-						data={data} 
+						data={data.value} 
 						cursorBranch={cursorBranch}
 						height={paneHeight}
 						scrollPosition={scrollPositions.stack}
@@ -293,7 +285,7 @@ function AppInner() {
 					{/* Commits pane (bottom left) */}
 					<Commits 
 						isSelected={pane === "commits"} 
-						data={data} 
+						data={data.value} 
 						cursorCommit={cursorCommit}
 						height={paneHeight}
 						scrollPosition={scrollPositions.commits}
@@ -305,7 +297,7 @@ function AppInner() {
 					{/* Viewer pane (top right) */}
 					<Viewer 
 						isSelected={pane === "viewer"} 
-						data={data} 
+						data={data.value} 
 						cursorCommit={cursorCommit}
 						cursorBranch={cursorBranch}
 						showAsciiArt={pane === "header"}
