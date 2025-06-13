@@ -235,84 +235,79 @@ function AppInner() {
 		}
 	});
 
-	// Handle loading and error states
-	if (Result.isInitial(data)) {
-		return (
+	return Result.match(data, {
+		onInitial: () => (
 			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
 				<Text color="cyan">Loading graphite data...</Text>
 			</Box>
-		);
-	}
-
-	if (Result.isFailure(data)) {
-		return (
+		),
+		onFailure: ({ cause }) => (
 			<Box flexDirection="column" alignItems="center" justifyContent="center" height={terminalHeight}>
-				<Text color="red">Error loading graphite data: {Cause.pretty(data.cause)}</Text>
+				<Text color="red">Error loading graphite data: {Cause.pretty(cause)}</Text>
 				<Text color="gray">Press 'q' to quit</Text>
 			</Box>
-		);
-	}
+		),
+		onSuccess: ({ value }) => (
+			<Box flexDirection="column" height={terminalHeight} width={terminalWidth}>
+				{/* Header */}
+				<Box 
+					borderStyle="round" 
+					borderColor={pane === "header" ? "cyan" : "blue"} 
+					paddingX={1}
+				>
+					<Text color={pane === "header" ? "cyan" : "blue"} bold={pane === "header"}>
+						[0] GTUI - Graphite TUI {pane === "header" && "← selected"}
+					</Text>
+					<Box marginLeft={4}>
+						<Text color="gray">Press 0/1/2/3/4 to switch panes, 'q' to quit</Text>
+					</Box>
+				</Box>
 
-	return (
-		<Box flexDirection="column" height={terminalHeight} width={terminalWidth}>
-			{/* Header */}
-			<Box 
-				borderStyle="round" 
-				borderColor={pane === "header" ? "cyan" : "blue"} 
-				paddingX={1}
-			>
-				<Text color={pane === "header" ? "cyan" : "blue"} bold={pane === "header"}>
-					[0] GTUI - Graphite TUI {pane === "header" && "← selected"}
-				</Text>
-				<Box marginLeft={4}>
-					<Text color="gray">Press 0/1/2/3/4 to switch panes, 'q' to quit</Text>
+				{/* Main content area */}
+				<Box flexDirection="row" flexGrow={1} marginTop={1}>
+					{/* Left column */}
+					<Box flexDirection="column" width="50%">
+						{/* Stack pane (top left) */}
+						<Stack 
+							isSelected={pane === "stack"} 
+							data={value} 
+							cursorBranch={cursorBranch}
+							height={paneHeight}
+							scrollPosition={scrollPositions.stack}
+						/>
+
+						{/* Commits pane (bottom left) */}
+						<Commits 
+							isSelected={pane === "commits"} 
+							data={value} 
+							cursorCommit={cursorCommit}
+							height={paneHeight}
+							scrollPosition={scrollPositions.commits}
+						/>
+					</Box>
+
+					{/* Right column */}
+					<Box flexDirection="column" width="50%">
+						{/* Viewer pane (top right) */}
+						<Viewer 
+							isSelected={pane === "viewer"} 
+							data={value} 
+							cursorCommit={cursorCommit}
+							cursorBranch={cursorBranch}
+							showAsciiArt={pane === "header"}
+							height={paneHeight}
+							scrollPosition={scrollPositions.viewer}
+						/>
+
+						{/* Command log pane (bottom right) */}
+						<CommandLog 
+							isSelected={pane === "log"}
+							height={paneHeight}
+							scrollPosition={scrollPositions.log}
+						/>
+					</Box>
 				</Box>
 			</Box>
-
-			{/* Main content area */}
-			<Box flexDirection="row" flexGrow={1} marginTop={1}>
-				{/* Left column */}
-				<Box flexDirection="column" width="50%">
-					{/* Stack pane (top left) */}
-					<Stack 
-						isSelected={pane === "stack"} 
-						data={data.value} 
-						cursorBranch={cursorBranch}
-						height={paneHeight}
-						scrollPosition={scrollPositions.stack}
-					/>
-
-					{/* Commits pane (bottom left) */}
-					<Commits 
-						isSelected={pane === "commits"} 
-						data={data.value} 
-						cursorCommit={cursorCommit}
-						height={paneHeight}
-						scrollPosition={scrollPositions.commits}
-					/>
-				</Box>
-
-				{/* Right column */}
-				<Box flexDirection="column" width="50%">
-					{/* Viewer pane (top right) */}
-					<Viewer 
-						isSelected={pane === "viewer"} 
-						data={data.value} 
-						cursorCommit={cursorCommit}
-						cursorBranch={cursorBranch}
-						showAsciiArt={pane === "header"}
-						height={paneHeight}
-						scrollPosition={scrollPositions.viewer}
-					/>
-
-					{/* Command log pane (bottom right) */}
-					<CommandLog 
-						isSelected={pane === "log"}
-						height={paneHeight}
-						scrollPosition={scrollPositions.log}
-					/>
-				</Box>
-			</Box>
-		</Box>
-	);
+		)
+	})
 }
